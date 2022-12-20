@@ -23,13 +23,13 @@
     <module>configserver</module>
   </modules>
 
-  <properties>
+  <!-- <properties>
     <spring-cloud-config-server.version>2.2.5.RELEASE</spring-cloud-config-server.version>
     <spring-cloud-starter-eureka.version>1.4.7.RELEASE</spring-cloud-starter-eureka.version>
     <spring-cloud-starter-feign.version>1.4.7.RELEASE</spring-cloud-starter-feign.version>
     <spring-cloud-starter-hystrix.version>1.4.7.RELEASE</spring-cloud-starter-hystrix.version>
     <spring-cloud-stream.version>3.0.7.RELEASE</spring-cloud-stream.version>
-  </properties>
+  </properties> -->
 
   <!--Allows consolidate and centralized management of dependencies version
     without adding dependencies that are inherit by all children,

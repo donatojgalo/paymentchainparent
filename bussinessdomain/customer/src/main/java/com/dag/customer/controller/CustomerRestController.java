@@ -1,11 +1,11 @@
 package com.dag.customer.controller;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -28,10 +28,10 @@ import com.dag.customer.repository.CustomerRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.tcp.TcpClient;
 
 @RestController
 @RequestMapping("/customers")
@@ -40,30 +40,44 @@ public class CustomerRestController {
     @Autowired
     private CustomerRepository repository;
 
+    @Value("${user.role}")
+    private String role;
+
     private final WebClient.Builder webClientBuilder;
 
     public CustomerRestController(WebClient.Builder webClientBuilder) {
         this.webClientBuilder = webClientBuilder;
     }
 
-    HttpClient client = HttpClient.create()
-            // Connection Timeout: is a period within which a connection between a client
-            // and a server must be established
+    // define timeout
+    TcpClient client = TcpClient
+            .create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-            .option(ChannelOption.SO_KEEPALIVE, true)
-            .option(EpollChannelOption.TCP_KEEPIDLE, 300)
-            .option(EpollChannelOption.TCP_KEEPINTVL, 60)
-            // Response Timeout: The maximun time we wait to receive a response after
-            // sending a request
-            .responseTimeout(Duration.ofSeconds(1))
-            // Read and Write Timeout: A read timeout occurs when no data was read within a
-            // certain
-            // period of time, while the write timeout when a write operation cannot finish
-            // at a specific time
             .doOnConnected(connection -> {
                 connection.addHandlerLast(new ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS));
                 connection.addHandlerLast(new WriteTimeoutHandler(5000, TimeUnit.MILLISECONDS));
             });
+
+    // HttpClient client = HttpClient.create()
+    // Connection Timeout: is a period within which a connection between a client
+    // and a server must be established
+    // .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+    // .option(ChannelOption.SO_KEEPALIVE, true)
+    // .option(EpollChannelOption.TCP_KEEPIDLE, 300)
+    // .option(EpollChannelOption.TCP_KEEPINTVL, 60)
+    // Response Timeout: The maximun time we wait to receive a response after
+    // sending a request
+    // .responseTimeout(Duration.ofSeconds(1))
+    // Read and Write Timeout: A read timeout occurs when no data was read within a
+    // certain
+    // period of time, while the write timeout when a write operation cannot finish
+    // at a specific time
+    // .doOnConnected(connection -> {
+    // connection.addHandlerLast(new ReadTimeoutHandler(5000,
+    // TimeUnit.MILLISECONDS));
+    // connection.addHandlerLast(new WriteTimeoutHandler(5000,
+    // TimeUnit.MILLISECONDS));
+    // });
 
     @GetMapping
     public List<Customer> findAll() {
@@ -120,31 +134,6 @@ public class CustomerRestController {
 
     }
 
-    /**
-     * Call Product Microservice, find a product by Id and return its name
-     * 
-     * @param id of product to find
-     * @return name of product if it was find
-     */
-    private String getProductName(long id) {
-
-        WebClient build = webClientBuilder.clientConnector(
-                new ReactorClientHttpConnector(client))
-                .baseUrl("http://bussinessdomain-product/products")
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultUriVariables(Collections.singletonMap(
-                        "url", "http://bussinessdomain-product/products"))
-                .build();
-
-        JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
-                .retrieve().bodyToMono(JsonNode.class).block();
-
-        String name = block.get("name").asText();
-
-        return name;
-
-    }
-
     @GetMapping("/full")
     public Customer getByCode(@RequestParam String code) {
 
@@ -166,12 +155,41 @@ public class CustomerRestController {
 
     }
 
+    /**
+     * Call Product Microservice, find a product by Id and return its name
+     * 
+     * @param id of product to find
+     * @return name of product if it was find
+     */
+    private String getProductName(long id) {
+
+        WebClient build = webClientBuilder.clientConnector(
+                // new ReactorClientHttpConnector(client))
+                new ReactorClientHttpConnector(HttpClient.from(client)))
+                .baseUrl("http://bussinessdomain-product/products")
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultUriVariables(Collections.singletonMap(
+                        "url", "http://bussinessdomain-product/products"))
+                .build();
+
+        JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
+                .retrieve().bodyToMono(JsonNode.class).block();
+
+        String name = block.get("name").asText();
+
+        return name;
+
+    }
+
     private List<?> getTransactions(String accountNumber) {
 
         WebClient build = webClientBuilder.clientConnector(
-                new ReactorClientHttpConnector(client))
+                // new ReactorClientHttpConnector(client))
+                new ReactorClientHttpConnector(HttpClient.from(client)))
                 .baseUrl("http://bussinessdomain-transaction/transactions")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultUriVariables(Collections.singletonMap(
+                        "url", "http://bussinessdomain-transaction/transactions"))
                 .build();
 
         return build.method(HttpMethod.GET).uri(
@@ -181,6 +199,11 @@ public class CustomerRestController {
                         .build())
                 .retrieve().bodyToFlux(Object.class).collectList().block();
 
+    }
+
+    @GetMapping("/role")
+    public String showRole() {
+        return "Hello your role is: " + role;
     }
 
 }

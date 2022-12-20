@@ -60,9 +60,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <spring-boot.version>2.7.5</spring-boot.version>
-    <spring-boot-maven-plugin.version>2.7.5</spring-boot-maven-plugin.version>
-    <spring-cloud-dependencies.version>2021.0.4</spring-cloud-dependencies.version>
+    <spring-boot.version>2.6.2</spring-boot.version>
+    <spring-boot-maven-plugin.version>${spring-boot.version}</spring-boot-maven-plugin.version>
+    <spring-cloud-dependencies.version>2021.0.0</spring-cloud-dependencies.version>
     <dockerfile-maven-version>1.4.13</dockerfile-maven-version>
   </properties>
 

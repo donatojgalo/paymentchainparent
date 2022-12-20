@@ -18,7 +18,7 @@
 	<description>Servidor central para la administración de todos los microservicios</description>
 
 	<properties>
-		<spring-boot-admin.version>2.7.5</spring-boot-admin.version>
+		<spring-boot-admin.version>2.5.5</spring-boot-admin.version>
 	</properties>
 
 	<dependencies>

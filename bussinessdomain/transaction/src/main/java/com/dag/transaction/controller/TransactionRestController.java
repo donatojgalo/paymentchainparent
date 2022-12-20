@@ -30,8 +30,8 @@ public class TransactionRestController {
     }
 
     @GetMapping("/{id}")
-    public Transaction get(@PathVariable Long id) {
-        return repository.findById(id).orElse(null);
+    public ResponseEntity<Transaction> get(@PathVariable Long id) {
+        return repository.findById(id).map(x -> ResponseEntity.ok(x)).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/customer/transactions")
