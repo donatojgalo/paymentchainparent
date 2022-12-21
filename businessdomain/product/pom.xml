@@ -7,15 +7,15 @@
 
 	<parent>
 		<groupId>com.dag</groupId>
-		<artifactId>bussinessdomain</artifactId>
+		<artifactId>businessdomain</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
 	</parent>
 
 	<groupId>com.dag</groupId>
-	<artifactId>customer</artifactId>
+	<artifactId>product</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
-	<name>customer</name>
-	<description>Customer microservice</description>
+	<name>product</name>
+	<description>Product microservice</description>
 
 	<build>
 		<plugins>

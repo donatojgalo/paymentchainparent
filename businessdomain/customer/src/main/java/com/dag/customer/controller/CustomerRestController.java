@@ -179,10 +179,10 @@ public class CustomerRestController {
         WebClient build = webClientBuilder.clientConnector(
                 // new ReactorClientHttpConnector(client))
                 new ReactorClientHttpConnector(HttpClient.from(client)))
-                .baseUrl("http://bussinessdomain-product/products")
+                .baseUrl("http://businessdomain-product/products")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultUriVariables(Collections.singletonMap(
-                        "url", "http://bussinessdomain-product/products"))
+                        "url", "http://businessdomain-product/products"))
                 .build();
 
         JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
@@ -199,10 +199,10 @@ public class CustomerRestController {
         WebClient build = webClientBuilder.clientConnector(
                 // new ReactorClientHttpConnector(client))
                 new ReactorClientHttpConnector(HttpClient.from(client)))
-                .baseUrl("http://bussinessdomain-transaction/transactions")
+                .baseUrl("http://businessdomain-transaction/transactions")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultUriVariables(Collections.singletonMap(
-                        "url", "http://bussinessdomain-transaction/transactions"))
+                        "url", "http://businessdomain-transaction/transactions"))
                 .build();
 
         return build.method(HttpMethod.GET).uri(

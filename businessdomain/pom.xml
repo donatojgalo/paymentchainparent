@@ -12,10 +12,10 @@
   </parent>
 
   <groupId>com.dag</groupId>
-  <artifactId>bussinessdomain</artifactId>
+  <artifactId>businessdomain</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>bussinessdomain</name>
+  <name>businessdomain</name>
 
   <modules>
     <module>customer</module>

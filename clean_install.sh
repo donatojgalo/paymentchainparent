@@ -11,9 +11,9 @@ clean_install() {
     cd ../..
 }
 
-clean_install bussinessdomain/customer
-clean_install bussinessdomain/product
-clean_install bussinessdomain/transaction
+clean_install businessdomain/customer
+clean_install businessdomain/product
+clean_install businessdomain/transaction
 clean_install infrastructuredomain/adminserver
 clean_install infrastructuredomain/configserver
 clean_install infrastructuredomain/eurekaserver

@@ -52,7 +52,7 @@
   <description>POM parent project for all spring boot projects</description>
 
   <modules>
-    <module>bussinessdomain</module>
+    <module>businessdomain</module>
     <module>infrastructuredomain</module>
   </modules>
 
