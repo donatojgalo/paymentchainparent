@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -80,13 +81,25 @@ public class CustomerRestController {
     // });
 
     @GetMapping
-    public List<Customer> findAll() {
-        return repository.findAll();
+    public ResponseEntity<List<Customer>> findAll() {
+
+        List<Customer> all = repository.findAll();
+
+        if (all.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.ok(all);
+        }
+
     }
 
     @GetMapping("/{id}")
-    public Customer get(@PathVariable Long id) {
-        return repository.findById(id).orElse(null);
+    public ResponseEntity<Customer> get(@PathVariable Long id) {
+
+        return repository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+
     }
 
     @PostMapping
@@ -96,7 +109,7 @@ public class CustomerRestController {
         input.getProducts().forEach(p -> p.setCustomer(input));
 
         Customer save = repository.save(input);
-        return ResponseEntity.ok(save);
+        return new ResponseEntity<>(save, HttpStatus.CREATED);
 
     }
 
