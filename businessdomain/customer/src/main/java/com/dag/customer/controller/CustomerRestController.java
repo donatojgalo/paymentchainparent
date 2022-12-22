@@ -1,8 +1,13 @@
 package com.dag.customer.controller;
 
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,9 +27,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.dag.customer.entity.Customer;
 import com.dag.customer.entity.CustomerProduct;
+import com.dag.customer.exception.BusinessRuleException;
 import com.dag.customer.repository.CustomerRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -41,14 +48,11 @@ public class CustomerRestController {
     @Autowired
     private CustomerRepository repository;
 
+    @Autowired
+    private WebClient.Builder webClientBuilder;
+
     @Value("${user.role}")
     private String role;
-
-    private final WebClient.Builder webClientBuilder;
-
-    public CustomerRestController(WebClient.Builder webClientBuilder) {
-        this.webClientBuilder = webClientBuilder;
-    }
 
     // define timeout
     TcpClient client = TcpClient
@@ -104,11 +108,10 @@ public class CustomerRestController {
 
     @PostMapping
     public ResponseEntity<Customer> create(
-            @RequestBody Customer input) {
+            @RequestBody Customer input)
+            throws BusinessRuleException, UnknownHostException {
 
-        input.getProducts().forEach(p -> p.setCustomer(input));
-
-        Customer save = repository.save(input);
+        Customer save = save(input);
         return new ResponseEntity<>(save, HttpStatus.CREATED);
 
     }
@@ -148,23 +151,53 @@ public class CustomerRestController {
     }
 
     @GetMapping("/full")
-    public Customer getByCode(@RequestParam String code) {
+    public ResponseEntity<Customer> getByCode(@RequestParam String code) {
 
         Customer customer = repository.findByCode(code).orElse(null);
+
+        if (customer == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         List<CustomerProduct> products = customer.getProducts();
 
         // for each product find it name
         products.forEach(x -> {
-            String productName = getProductName(x.getProductId());
-            x.setProductName(productName);
+
+            try {
+                String productName = getProductName(x.getProductId());
+                x.setProductName(productName);
+            } catch (UnknownHostException ex) {
+                Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
+            }
+
         });
 
         // find all transactions that belong this account number
         List<?> transactions = getTransactions(customer.getAccountNumber());
         customer.setTransactions(transactions);
 
-        return customer;
+        return ResponseEntity.ok(customer);
+
+    }
+
+    public Customer save(Customer input) throws BusinessRuleException, UnknownHostException {
+
+        if (input.getProducts() != null) {
+            for (Iterator<CustomerProduct> it = input.getProducts().iterator(); it.hasNext();) {
+                CustomerProduct dto = it.next();
+                String productName = getProductName(dto.getProductId());
+                if (productName.isBlank()) {
+                    throw new BusinessRuleException(
+                            "1025", "Validation error, product does not exists",
+                            HttpStatus.PRECONDITION_FAILED);
+                } else {
+                    dto.setCustomer(input);
+                }
+            }
+        }
+
+        return repository.save(input);
 
     }
 
@@ -174,43 +207,67 @@ public class CustomerRestController {
      * @param id of product to find
      * @return name of product if it was find
      */
-    private String getProductName(long id) {
+    private String getProductName(long id) throws UnknownHostException {
 
-        WebClient build = webClientBuilder.clientConnector(
-                // new ReactorClientHttpConnector(client))
-                new ReactorClientHttpConnector(HttpClient.from(client)))
-                .baseUrl("http://businessdomain-product/products")
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultUriVariables(Collections.singletonMap(
-                        "url", "http://businessdomain-product/products"))
-                .build();
+        String name = null;
 
-        JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
-                .retrieve().bodyToMono(JsonNode.class).block();
+        try {
 
-        String name = block.get("name").asText();
+            WebClient build = webClientBuilder.clientConnector(
+                    // new ReactorClientHttpConnector(client))
+                    new ReactorClientHttpConnector(HttpClient.from(client)))
+                    .baseUrl("http://businessdomain-product/products")
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .defaultUriVariables(Collections.singletonMap(
+                            "url", "http://businessdomain-product/products"))
+                    .build();
+
+            JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
+                    .retrieve().bodyToMono(JsonNode.class).block();
+
+            name = block == null ? "" : block.get("name").asText();
+
+        } catch (WebClientResponseException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                return "";
+            } else {
+                throw new UnknownHostException(e.getMessage());
+            }
+        }
 
         return name;
 
     }
 
-    private List<?> getTransactions(String accountNumber) {
+    private <T> List<T> getTransactions(String accountNumber) {
 
-        WebClient build = webClientBuilder.clientConnector(
-                // new ReactorClientHttpConnector(client))
-                new ReactorClientHttpConnector(HttpClient.from(client)))
-                .baseUrl("http://businessdomain-transaction/transactions")
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultUriVariables(Collections.singletonMap(
-                        "url", "http://businessdomain-transaction/transactions"))
-                .build();
+        List<T> transactions = new ArrayList<>();
 
-        return build.method(HttpMethod.GET).uri(
-                uriBuilder -> uriBuilder
-                        .path("/customer/transactions")
-                        .queryParam("accountNumber", accountNumber)
-                        .build())
-                .retrieve().bodyToFlux(Object.class).collectList().block();
+        try {
+
+            WebClient build = webClientBuilder.clientConnector(
+                    // new ReactorClientHttpConnector(client))
+                    new ReactorClientHttpConnector(HttpClient.from(client)))
+                    .baseUrl("http://businessdomain-transaction/transactions")
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .defaultUriVariables(Collections.singletonMap(
+                            "url", "http://businessdomain-transaction/transactions"))
+                    .build();
+
+            List<Object> block = build.method(HttpMethod.GET).uri(
+                    uriBuilder -> uriBuilder
+                            .path("/customer/transactions")
+                            .queryParam("accountNumber", accountNumber)
+                            .build())
+                    .retrieve().bodyToFlux(Object.class).collectList().block();
+
+            transactions = (List<T>) block;
+
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+
+        return transactions;
 
     }
 
